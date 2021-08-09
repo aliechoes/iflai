@@ -12,6 +12,16 @@ from skimage.filters import  sobel
 from skimage.feature import hog
 from skimage.transform import resize
 
+__all__ = [ 'MaskBasedFeatures', 
+            'GLCMFeatures',
+            'GradientRMS', 
+            'BackgroundMean',  
+            'CellShape', 
+            'Collocalization', 
+            'HistogramFeatures', 
+            'HogFeatures', 
+            'IntersectionProperties']
+
 class MaskBasedFeatures(BaseEstimator, TransformerMixin):
     """
     mask based features
@@ -353,7 +363,7 @@ class IntersectionProperties(BaseEstimator, TransformerMixin):
 
     def transform(self,X):
         image = X[0].copy() 
-        mask = X[1].copy
+        mask = X[1].copy()
         segmented_cell = image.copy() * mask.copy()
         n_channels = image.shape[2]
         for ch1 in range(0,n_channels):
