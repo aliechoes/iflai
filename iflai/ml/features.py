@@ -20,7 +20,8 @@ __all__ = [ 'MaskBasedFeatures',
             'Collocalization', 
             'HistogramFeatures', 
             'HogFeatures', 
-            'IntersectionProperties']
+            'IntersectionProperties',
+            'CenterOfCellsDistances']
 
 class MaskBasedFeatures(BaseEstimator, TransformerMixin):
     """
@@ -34,15 +35,19 @@ class MaskBasedFeatures(BaseEstimator, TransformerMixin):
                             "equivalent_diameter", 
                             "euler_number", 
                             "extent", 
+                            "feret_diameter_max",
                             "filled_area", 
                             "major_axis_length", 
                             "max_intensity",
                             "mean_intensity",
                             "min_intensity",
                             "minor_axis_length", 
+                            "moments_hu",
+                            "orientation",
                             "perimeter",
                             "perimeter_crofton",
-                            "solidity"] 
+                            "solidity",
+                            "weighted_moments_hu"] 
         
     
     def fit(self, X = None, y = None):        
@@ -57,15 +62,16 @@ class MaskBasedFeatures(BaseEstimator, TransformerMixin):
         # storing the feature values
         features = dict()
         for ch in range(image.shape[2]):
-            try:
-                calculated_features = regionprops_table(mask[:,:,ch].astype(int), 
-                                                                image[:,:,ch],
-                                                                properties = self.properties)
-
-                for p in feature_names:
-                        features["mask_based_" +  p + "_Ch" + str(ch+1)] = calculated_features[p][0]
-            except: 
-                features["mask_based_" +  p + "_Ch" + str(ch+1)] = 0.    
+            calculated_features = regionprops_table(mask[:,:,ch].astype(int), 
+                                                            image[:,:,ch],
+                                                            properties = self.properties)
+            
+            for p in feature_names:
+                deignated_name = "mask_based_" +  p + "_Ch" + str(ch+1)
+                try:
+                    features[deignated_name] = calculated_features[p][0]   
+                except: 
+                    features[deignated_name] = -1    
         return features
             
 
@@ -128,7 +134,22 @@ class GLCMFeatures(BaseEstimator, TransformerMixin):
 
 
 class GradientRMS(BaseEstimator, TransformerMixin):
+    """calculates the RMS of the gradient of the image
+    
+    calculates the RMS of the gradient of the image. It can be used to check whether
+    an image is focused or not.
 
+    Parameters
+    ----------
+    image : 3D array, shape (M, N, C)
+        The input image with multiple channels. 
+
+    Returns
+    -------
+    features :  dict  
+        dictionary including 'RMS_Chx' 
+
+    """
     def __init__(self):
         self.RMS = "RMS"
 
@@ -143,7 +164,20 @@ class GradientRMS(BaseEstimator, TransformerMixin):
         return features
 
 class BackgroundMean(BaseEstimator, TransformerMixin):
+    """calculates average background pixels
+    
+    calculates average background pixels. It can be used as a sanity check for bleeding through
 
+    Parameters
+    ----------
+    image : 3D array, shape (M, N, C)
+        The input image with multiple channels. 
+
+    Returns
+    -------
+    features :  dict  
+        dictionary including 'RMS_Chx' 
+    """
     def __init__(self):
         self.BackgroundMean = "BackgroundMean"
 
@@ -351,7 +385,7 @@ class IntersectionProperties(BaseEstimator, TransformerMixin):
     Returns
     -------
     features :  dict  
-        dictionary including hog_1, hog_2 ...
+        dictionary including sum_intensity_ratio, mean_intensity_ratio ...
 
     """
 
@@ -366,14 +400,78 @@ class IntersectionProperties(BaseEstimator, TransformerMixin):
         mask = X[1].copy()
         segmented_cell = image.copy() * mask.copy()
         n_channels = image.shape[2]
+        features = dict()
         for ch1 in range(0,n_channels):
-            for ch2 in range(ch1,n_channels):
+            for ch2 in range(ch1+1,n_channels): 
                 intersection_mask = mask[:,:,ch1].copy() * mask[:,:,ch2].copy()   
-                features = dict()
                 for ch in range(n_channels):
                     suffix = "_Ch" + str(ch + 1) + "_R" + str(ch1 + 1) + "_R" + str(ch2 + 1)
                     intersected_cell = segmented_cell[:,:,ch] * intersection_mask
                     features["sum_intensity_ratio" + suffix] = intersected_cell.sum() / (segmented_cell[:,:,ch].sum() + self.eps)
                     features["mean_intensity_ratio" + suffix] = intersected_cell.mean() / (segmented_cell[:,:,ch].mean() + self.eps) 
                     features["max_intensity_ratio" + suffix] = intersected_cell.max() / (segmented_cell[:,:,ch].mean() + self.eps)        
+        return features
+
+
+class CenterOfCellsDistances(BaseEstimator, TransformerMixin):
+    """Distances of the cells
+    
+    Distances of the cells
+
+    Parameters
+    ----------
+    image : 3D array, shape (M, N, C)
+        The input image with multiple channels.
+    mask : 3D array, shape (M, N, C)
+        The input mask with multiple channels.
+
+    Returns
+    -------
+    features :  dict  
+        dictionary including hog_1, hog_2 ...
+
+    """
+    def __init__(self):
+        self.properties = [ "centroid",
+                            "weighted_centroid" ] 
+        
+    
+    def fit(self, X = None, y = None):        
+        return self
+    
+    def transform(self,X):
+        image = X[0].copy()
+        mask = X[1].copy()
+ 
+        # storing the feature values
+        features = dict()
+        n_channels = image.shape[2]
+        for ch1 in range(0,n_channels):
+            for ch2 in range(ch1+1,n_channels): 
+                channel1 = regionprops_table(mask[:,:,ch1].astype(int), 
+                                                image[:,:,ch1], 
+                                                properties = self.properties )  
+                    
+                channel2 = regionprops_table(mask[:,:,ch2].astype(int), 
+                                                image[:,:,ch2], 
+                                                properties = self.properties ) 
+
+                ## distance feature
+                feature_name = "cell_distance_Ch" + str(ch1 + 1) + "_Ch" +  str(ch2 + 1)
+                try:
+                    features[feature_name] = (channel2['centroid-0'][0] - channel1['centroid-0'][0])**2
+                    features[feature_name] += (channel2['centroid-1'][0] - channel1['centroid-1'][0])**2
+                    features[feature_name] = np.sqrt(features[feature_name])
+                except IndexError:
+                    features[feature_name] = -1.
+
+                ## weighted distance feature  
+                feature_name = "weighted_cell_distance_Ch" + str(ch1 + 1) + "_Ch" +  str(ch2 + 1)
+                try:
+                    features[feature_name] = (channel2['weighted_centroid-0'][0] - channel1['weighted_centroid-0'][0])**2
+                    features[feature_name] += (channel2['weighted_centroid-1'][0] - channel1['weighted_centroid-1'][0])**2
+                    features[feature_name] = np.sqrt(features[feature_name])
+                except IndexError:
+                    features[feature_name] = -1.
+
         return features
