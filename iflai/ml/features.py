@@ -11,7 +11,6 @@ from skimage.measure import regionprops_table
 from skimage.filters import  sobel
 from skimage.feature import hog
 from skimage.transform import resize
-from sklearn.feature_extraction import DictVectorizer
 
 class MaskBasedFeatures(BaseEstimator, TransformerMixin):
     """
@@ -346,7 +345,7 @@ class IntersectionProperties(BaseEstimator, TransformerMixin):
 
     """
 
-    def __init__(self , eps = 0.0000000000000001):
+    def __init__(self , eps = 1e-12):
         self.eps = eps
 
     def fit(self, X = None, y = None):        
@@ -355,20 +354,16 @@ class IntersectionProperties(BaseEstimator, TransformerMixin):
     def transform(self,X):
         image = X[0].copy() 
         mask = X[1].copy
-
+        segmented_cell = image.copy() * mask.copy()
         n_channels = image.shape[2]
         for ch1 in range(0,n_channels):
             for ch2 in range(ch1,n_channels):
-                intersection_mask = mask[:,:,ch1].copy() * mask[:,:,ch2].copy()
-                segmented_cell = image.copy() * mask.copy()   
+                intersection_mask = mask[:,:,ch1].copy() * mask[:,:,ch2].copy()   
                 features = dict()
                 for ch in range(n_channels):
                     suffix = "_Ch" + str(ch + 1) + "_R" + str(ch1 + 1) + "_R" + str(ch2 + 1)
                     intersected_cell = segmented_cell[:,:,ch] * intersection_mask
-                    indx = segmented_cell[:,:,ch] > 0.
                     features["sum_intensity_ratio" + suffix] = intersected_cell.sum() / (segmented_cell[:,:,ch].sum() + self.eps)
                     features["mean_intensity_ratio" + suffix] = intersected_cell.mean() / (segmented_cell[:,:,ch].mean() + self.eps) 
-                    features["max_intensity_ratio" + suffix] = intersected_cell.max() / (segmented_cell[:,:,ch].mean() + self.eps) 
-
-                        
+                    features["max_intensity_ratio" + suffix] = intersected_cell.max() / (segmented_cell[:,:,ch].mean() + self.eps)        
         return features
