@@ -325,3 +325,50 @@ class HogFeatures(BaseEstimator, TransformerMixin):
             features["hog_" + str(i)] = hog_features[i]
                 
         return features
+
+
+class IntersectionProperties(BaseEstimator, TransformerMixin):
+    """Properties in the intersection of the cells
+    
+    Properties in the intersection of the cells 
+
+    Parameters
+    ----------
+    image : 3D array, shape (M, N, C)
+        The input image with multiple channels.
+    mask : 3D array, shape (M, N, C)
+        The input mask with multiple channels.
+
+    Returns
+    -------
+    features :  dict  
+        dictionary including hog_1, hog_2 ...
+
+    """
+
+    def __init__(self , eps = 0.0000000000000001):
+        self.eps = eps
+
+    def fit(self, X = None, y = None):        
+        return self
+
+    def transform(self,X):
+        image = X[0].copy() 
+        mask = X[1].copy
+
+        n_channels = image.shape[2]
+        for ch1 in range(0,n_channels):
+            for ch2 in range(ch1,n_channels):
+                intersection_mask = mask[:,:,ch1].copy() * mask[:,:,ch2].copy()
+                segmented_cell = image.copy() * mask.copy()   
+                features = dict()
+                for ch in range(n_channels):
+                    suffix = "_Ch" + str(ch + 1) + "_R" + str(ch1 + 1) + "_R" + str(ch2 + 1)
+                    intersected_cell = segmented_cell[:,:,ch] * intersection_mask
+                    indx = segmented_cell[:,:,ch] > 0.
+                    features["sum_intensity_ratio" + suffix] = intersected_cell.sum() / (segmented_cell[:,:,ch].sum() + self.eps)
+                    features["mean_intensity_ratio" + suffix] = intersected_cell.mean() / (segmented_cell[:,:,ch].mean() + self.eps) 
+                    features["max_intensity_ratio" + suffix] = intersected_cell.max() / (segmented_cell[:,:,ch].mean() + self.eps) 
+
+                        
+        return features
