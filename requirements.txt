@@ -5,4 +5,5 @@ scikit-image
 xgboost
 torch
 torchvision
+tqdm
 skorch

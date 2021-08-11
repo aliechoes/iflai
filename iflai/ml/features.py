@@ -12,17 +12,6 @@ from skimage.filters import  sobel
 from skimage.feature import hog
 from skimage.transform import resize
 
-__all__ = [ 'MaskBasedFeatures', 
-            'GLCMFeatures',
-            'GradientRMS', 
-            'BackgroundMean',  
-            'CellShape', 
-            'Collocalization', 
-            'HistogramFeatures', 
-            'HogFeatures', 
-            'IntersectionProperties',
-            'CenterOfCellsDistances']
-
 class MaskBasedFeatures(BaseEstimator, TransformerMixin):
     """
     mask based features
@@ -350,22 +339,28 @@ class HogFeatures(BaseEstimator, TransformerMixin):
 
     """
 
-    def __init__(self , n_bins = 20):
-        self.n_bins = n_bins
+    def __init__(self , size = (64,64)):
+        self.size = size
 
     def fit(self, X = None, y = None):        
         return self
     
     def transform(self,X):
         image = X[0].copy() 
-        temp_image = resize(image.copy(), (64,64))
-        # calculating the pixels per cells 
-        hog_features= hog(temp_image, orientations=8, pixels_per_cell=(12, 12),
-                        cells_per_block=(1, 1), visualize=False, multichannel=True)
         
         features = dict()
-        for i in range(len(hog_features)):
-            features["hog_" + str(i)] = hog_features[i]
+        for ch in range(image.shape[2]):
+            temp_image = resize(image[:,:,ch].copy(), self.size)
+            # calculating the pixels per cells 
+            hog_features= hog(  temp_image, 
+                                orientations=8, 
+                                pixels_per_cell=(12, 12),
+                                cells_per_block=(1, 1), 
+                                visualize=False, 
+                                multichannel=False)
+        
+            for i in range(len(hog_features)):
+                features["Hog_" + str(i) + "_Ch" + str(ch+1)] = hog_features[i]
                 
         return features
 
