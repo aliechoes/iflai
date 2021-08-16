@@ -7,3 +7,5 @@ torch
 torchvision
 tqdm
 skorch
+imblearn
+h5py
