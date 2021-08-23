@@ -275,7 +275,7 @@ class Collocalization(BaseEstimator, TransformerMixin):
                     # creating the suffix name for better readability
                     suffix = "_R" + str(ch1 + 1) +"_Ch" + str(ch1 + 1) + "_R" + str(ch2 + 1) +"_Ch" + str(ch2 + 1)
                     features["correlation_distance" + suffix] = dist.correlation(channel1,channel2)
-                    features["sqeuclidean_distance" + suffix] = dist.sqeuclidean(channel1,channel2)
+                    features["euclidean_distance" + suffix] = dist.euclidean(channel1,channel2)
                     features["manders_overlap_coefficient" + suffix] = (channel1.sum()*channel2.sum())/(np.power(channel1,2).sum()*np.power(channel2,2).sum())
                     features["intensity_correlation_quotient" + suffix] = ((channel1>channel1.mean())*(channel2>channel2.mean())).sum()/(channel1.shape[0]) - 0.5 
                 
@@ -384,9 +384,10 @@ class IntersectionProperties(BaseEstimator, TransformerMixin):
 
     """
 
-    def __init__(self , eps = 1e-12):
+    def __init__(self , channels = None,eps = 1e-12):
         self.eps = eps
-
+        self.channels = channels
+            
     def fit(self, X = None, y = None):        
         return self
 
@@ -395,11 +396,15 @@ class IntersectionProperties(BaseEstimator, TransformerMixin):
         mask = X[1].copy()
         segmented_cell = image.copy() * mask.copy()
         n_channels = image.shape[2]
+
+        if self.channels is not None:
+            self.channels = range(n_channels)
+
         features = dict()
         for ch1 in range(0,n_channels):
             for ch2 in range(ch1+1,n_channels): 
                 intersection_mask = mask[:,:,ch1].copy() * mask[:,:,ch2].copy()   
-                for ch in range(n_channels):
+                for ch in self.channels:
                     suffix = "_Ch" + str(ch + 1) + "_R" + str(ch1 + 1) + "_R" + str(ch2 + 1)
                     intersected_cell = segmented_cell[:,:,ch] * intersection_mask
                     features["sum_intensity_ratio" + suffix] = intersected_cell.sum() / (segmented_cell[:,:,ch].sum() + self.eps)

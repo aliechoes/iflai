@@ -24,7 +24,8 @@ setup(
                         "scikit-image",
                         "xgboost",
                         "torch",
-                        "torchvision"],
+                        "torchvision",
+                        "skorch"],
     long_description=read('README.md'),
     classifiers=[
         'Development Status :: 3 - Alpha',
