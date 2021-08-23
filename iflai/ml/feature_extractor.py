@@ -86,8 +86,9 @@ class AmnisData(object):
     def metadata_generator(self,data_dir):
         return metadata_generator_(data_dir)
 
-    def extract(self,i):
-        h5_file = h5py.File(self.metadata.loc[i,"file"], "r")      
+    def extract(self,f):
+        print(f)
+        h5_file = h5py.File(f, "r")      
         image = h5_file.get("image")[()]*1.
         mask  = h5_file.get("mask")[()]
         h5_file.close()
@@ -96,8 +97,8 @@ class AmnisData(object):
         return features
     
     def extract_features_for_all_samples(self):
-        index_list = self.metadata.index.tolist()
-        results = Parallel(n_jobs=self.n_jobs)(delayed(self.extract)(i) for i in tqdm(index_list, position=0, leave=True) )
+        file_list = self.metadata["file"].tolist()
+        results = Parallel(n_jobs=self.n_jobs)(delayed(self.extract)(f) for f in tqdm(file_list, position=0, leave=True) )
         self.df_features = pd.DataFrame(results)
 
     def get_image_mask(self, i = 0):
