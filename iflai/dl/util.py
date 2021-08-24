@@ -2,12 +2,12 @@ import os
 import h5py
 import numpy as np
 import torch
-
+from tqdm import tqdm
 
 def read_data(path_to_data):
     X = []
     y = []
-    for image_name in os.listdir(path_to_data):
+    for image_name in tqdm(os.listdir(path_to_data)):
         o_n = os.path.splitext(image_name)[0]
         r = h5py.File(os.path.join(path_to_data, image_name), 'r')
         X.append(int(o_n))

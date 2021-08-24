@@ -80,7 +80,7 @@ class AutoFeatureSelection(BaseEstimator, TransformerMixin):
                                         max_features = self.top_k)
         selector5 = selector5.fit(X_, y)
         if self.verbose:
-            print('Calculating l2 logistic')
+            print('Calculating l2 logistic regression')
         
         selector6 = SelectFromModel(    XGBClassifier(n_jobs = -1, 
                                             eval_metric='logloss'),

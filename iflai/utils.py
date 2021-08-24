@@ -1,9 +1,11 @@
 import os
+import glob
 import numpy as np
 import pandas as pd
-import glob
-import logging
-from sklearn.model_selection import train_test_split
+import h5py
+import random
+from joblib import Parallel, delayed
+from tqdm import tqdm
 
 
 def list_of_dict_to_dict(list_of_dicts):
@@ -12,103 +14,74 @@ def list_of_dict_to_dict(list_of_dicts):
         new_dict.update(one_dict)
     return new_dict
 
-def finding_classes(data_dir):
-    """
-    this function finds the folders in the root path and considers them
-    as classes
-    """
-    classes = sorted(os.listdir(data_dir))
-    logging.info("Classes: %s \n" % classes)
-    return classes
-    
-def data_frame_creator(data_dir, classes, validation_split):
-    """
-    datafame including every file, which later will be used for reading the images.
-    the structure is like this:
-    file	        label	class	    prediction  set
-    file1_Chx.ext	0	    class_0 	0	        test
-    file2_Chx.ext	1	    class_1 	0	        train
-    file3_Chx.ext	0	    class_0 	0	        validation
-    .               .       .           .           .
-    .               .       .           .           .
-    .               .       .           .           .
-    """
-    df = input_dataframe_generator( data_dir, classes)
-    df = train_validation_test_split(  df, validation_split)
 
-    number_of_files_per_class(  self.df )
-        
-def number_of_files_per_class(df ):
-    """
-    this function finds the number of files in each folder. It is important to
-    consider that we consider all the channels togethr as on single image
-    output: dictionary with keys as classes and values as number of separate images
-    """
+def get_label(h5_file_path):
+    h5_file = h5py.File(h5_file_path, "r")  
+    ## label
+    results = dict()
+    try:
+        results["label"] = h5_file.get("label")[()]
+        results["set"] = "labeled"
+    except TypeError:
+        results["label"] = "-1"
+        results["set"] = "unlabeled"
+    try:
+        results["object_number"] = os.path.split(h5_file_path)[-1]
+        results["object_number"] = results["object_number"].replace(".h5","")
+        results["object_number"] = results["object_number"].split("_")[-1]
+    except TypeError:
+        results["object_number"] = None
+    h5_file.close()
+    return results
 
-    logging.info("detected independent images per classes") 
-    logging.info(df.groupby(["class", "set"])["class"].agg("count")) 
-    
-    return None
-    
-    
-    
-def input_dataframe_generator(data_dir, classes):
-    """
-    This functions gets the dictionary with the classes and number of files 
-    per class and gives back a dataframe with these columns
-    ["file"  ,"label", "class", "prediction",  
-            "class0_probability" ... "classN_probability"]
-    """
-    
-    df = pd.DataFrame(columns= ["file"  ,
-                                "label", 
-                                "class", 
-                                "set",
-                                "uncertainty" ,
-                                "prediction"] )
-    
-    data_directory = {"train" : data_dir}
-    
-    for dd in data_directory:
-        train_data_path = data_directory[dd]
-        for tdp in train_data_path:
-            label = 0
-            for cl in classes:
-                df_dummy = pd.DataFrame(columns= ["file" ,"label", "class", "set","prediction"]  )
-                df_dummy["file"] = glob.glob(os.path.join(tdp , cl,"*") ) 
-                df_dummy["label"] = label
-                df_dummy["class"] = cl
-                df_dummy["uncertainty"] = -1.
-                df_dummy["prediction"] = -1
-                df_dummy["set"] = dd
-                df = df.append(df_dummy, ignore_index=True)
-                label = label + 1
-    for cl in classes:
-            df[cl+"_probability"] = -1.
-    df_dummy["prediction"] = df_dummy["prediction"].astype(int)
-    return df
 
+def metadata_generator(data_dir,sample_size=None ,n_jobs=-1):
     
-def train_validation_test_split(df, validation_size= 0.2 , test_size= 0.2 ):
-    """
-    This functions gets the dataframe and creates train, validation and test 
-    split. it adds a new column: "set"
-    """
-    assert validation_size <= 1.
-    assert validation_size >= 0.
-    assert test_size <= 1.
-    assert test_size >= 0.
+    metadata_columns = ["file",
+                        "experiment",
+                        "donor", 
+                        "condition",
+                        "object_number",
+                        "set",
+                        "label"]
+    metadata = pd.DataFrame(columns=metadata_columns)
     
-    _, X_test = train_test_split( df.loc[df["set"]=="train" , "set"], 
-                                                stratify = df.loc[df["set"]=="train" , "set"], 
-                                                test_size=test_size, 
-                                                random_state=314)
-    df.loc[X_test.index,"set"] = "test"
-    
-    _, X_validation = train_test_split( df.loc[df["set"]=="train" , "set"], 
-                                                stratify = df.loc[df["set"]=="train" , "set"], 
-                                                test_size=validation_size, 
-                                                random_state=314)
-    df.loc[X_validation.index,"set"] = "validation"
+    experiments_list = sorted(os.listdir(data_dir))
+    print("Metadata prepration starts...")
+    for exp in experiments_list:
+        experiments_path = os.path.join(data_dir, exp)
+        donors_list = sorted(os.listdir(experiments_path))
+        for donor in donors_list:
+            donors_path = os.path.join(data_dir, exp, donor)
+            conditions_list = sorted(os.listdir(donors_path))
+            for cond in conditions_list:
+                print(exp, donor, cond)
+                conditions_path = os.path.join(data_dir, exp, donor, cond + "/*.h5" )
+                files = glob.glob(conditions_path)
+                
+                if sample_size:
+                    files = random.choices(files, k=min(sample_size, len(files)) )
+                
+                metadata_temp = pd.DataFrame(columns=metadata_columns)
+                metadata_temp["file"] = files
+                metadata_temp["experiment"] = exp
+                metadata_temp["donor"] = donor
+                metadata_temp["condition"] = cond
 
-    return df
+                index_list = metadata_temp.file.tolist()
+                
+                ## data parallelism
+                results = Parallel(n_jobs=n_jobs)(delayed(get_label)(f) \
+                            for f in tqdm(index_list, position=0, leave=True) )
+                results = pd.DataFrame(results)
+                
+                if results.shape[0] > 0:
+                    metadata_temp["label"] = results["label"]
+                    metadata_temp["set"] = results["set"]
+                    metadata_temp["object_number"] = results["object_number"]
+
+                    metadata = metadata.append(metadata_temp, ignore_index = True)
+                results = None
+                metadata_temp = None
+    print("...metadata prepration ended.")
+    return metadata

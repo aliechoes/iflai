@@ -384,7 +384,7 @@ class IntersectionProperties(BaseEstimator, TransformerMixin):
 
     """
 
-    def __init__(self , channels = None,eps = 1e-12):
+    def __init__(self , channels = None, eps = 1e-12):
         self.eps = eps
         self.channels = channels
             
