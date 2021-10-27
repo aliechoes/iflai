@@ -283,10 +283,10 @@ class Collocalization(BaseEstimator, TransformerMixin):
         return features
  
 
-class HistogramFeatures(BaseEstimator, TransformerMixin):
-    """calculates the histogram features per channel 
+class PercentileFeatures(BaseEstimator, TransformerMixin):
+    """calculates the percentile features per channel 
     
-    Calculates the histograms for different channels
+    Calculates the percentile for different channels
     For more info please refer to:
     https://scikit-image.org/docs/dev/api/skimage.exposure.html
 
@@ -304,8 +304,8 @@ class HistogramFeatures(BaseEstimator, TransformerMixin):
 
     """  
 
-    def __init__(self , n_bins = 20):
-        self.n_bins = n_bins
+    def __init__(self,  cuts= range(10,100,10)):
+        self.cuts = cuts
 
     def fit(self, X = None, y = None):        
         return self
@@ -314,9 +314,9 @@ class HistogramFeatures(BaseEstimator, TransformerMixin):
         image = X[0].copy() 
         features = dict()
         for ch in range(image.shape[2]):
-            hist, _ = np.histogram(image[:,:,ch], bins=self.n_bins)
-            for i in range(self.n_bins):
-                features["hist_" + str(i) + "_Ch" + str(ch+1)] = hist[i]
+            for i, cut in enumerate(self.cuts):
+                perc  = np.percentile(image[:,:,ch].ravel(), cut)
+                features["percentile_" + str(cut) +  "_Ch" + str(ch+1)] = perc
                 
         return features
 
@@ -397,13 +397,13 @@ class IntersectionProperties(BaseEstimator, TransformerMixin):
         segmented_cell = image.copy() * mask.copy()
         n_channels = image.shape[2]
 
-        if self.channels is not None:
+        if self.channels is None:
             self.channels = range(n_channels)
 
         features = dict()
         for ch1 in range(0,n_channels):
             for ch2 in range(ch1+1,n_channels): 
-                intersection_mask = mask[:,:,ch1].copy() * mask[:,:,ch2].copy()   
+                intersection_mask = mask[:,:,ch1].copy() * mask[:,:,ch2].copy()    
                 for ch in self.channels:
                     suffix = "_Ch" + str(ch + 1) + "_R" + str(ch1 + 1) + "_R" + str(ch2 + 1)
                     intersected_cell = segmented_cell[:,:,ch] * intersection_mask

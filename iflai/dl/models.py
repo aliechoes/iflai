@@ -227,14 +227,14 @@ class BasicBlock(nn.Module):
 
 
 class PretrainedModel(nn.Module):
-    def __init__(self, output_features, num_channels=3, pretrained=True, progress=True, **kwargs):
+    def __init__(self, num_classes=3, num_channels=3, pretrained=True, progress=True, **kwargs):
         super().__init__()
         model = _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress, **kwargs)
         if num_channels != 3:
             model.conv1 = nn.Conv2d(num_channels, 64, kernel_size=(7, 7),
                                     stride=(2, 2), padding=(3, 3), bias=False)
         num_ftrs = model.fc.in_features
-        model.fc = nn.Linear(num_ftrs, output_features)
+        model.fc = nn.Linear(num_ftrs, num_classes)
         self.model = model
 
     def forward(self, x):
