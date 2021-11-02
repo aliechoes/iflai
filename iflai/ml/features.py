@@ -11,6 +11,7 @@ from skimage.measure import regionprops_table
 from skimage.filters import  sobel
 from skimage.feature import hog
 from skimage.transform import resize
+from skimage.metrics import structural_similarity,hausdorff_distance
 
 class MaskBasedFeatures(BaseEstimator, TransformerMixin):
     """
@@ -269,15 +270,19 @@ class Collocalization(BaseEstimator, TransformerMixin):
             for ch2 in range(image.shape[2]):
                 if ch1 != ch2:
                     # rehaping the channels to 1D
-                    channel1 =  (image[:,:,ch1].copy() * mask[:,:,ch1].copy() ).ravel()
-                    channel2 =  (image[:,:,ch2].copy() * mask[:,:,ch2].copy() ).ravel()
+                    channel1 =  (image[:,:,ch1].copy() * mask[:,:,ch1].copy() ) 
+                    channel2 =  (image[:,:,ch2].copy() * mask[:,:,ch2].copy() ) 
 
                     # creating the suffix name for better readability
                     suffix = "_R" + str(ch1 + 1) +"_Ch" + str(ch1 + 1) + "_R" + str(ch2 + 1) +"_Ch" + str(ch2 + 1)
-                    features["correlation_distance" + suffix] = dist.correlation(channel1,channel2)
-                    features["euclidean_distance" + suffix] = dist.euclidean(channel1,channel2)
+                    features["correlation_distance" + suffix] = dist.correlation(   channel1.ravel(),
+                                                                                    channel2.ravel())
+                    features["euclidean_distance" + suffix] = dist.euclidean(   channel1.ravel(),
+                                                                                channel2.ravel())
                     features["manders_overlap_coefficient" + suffix] = (channel1.sum()*channel2.sum())/(np.power(channel1,2).sum()*np.power(channel2,2).sum())
                     features["intensity_correlation_quotient" + suffix] = ((channel1>channel1.mean())*(channel2>channel2.mean())).sum()/(channel1.shape[0]) - 0.5 
+                    features["structural_similarity" + suffix] = structural_similarity(channel1,channel2)
+                    features["hausdorff_distance" + suffix] = hausdorff_distance(channel1,channel2)   
                 
                 
         return features
