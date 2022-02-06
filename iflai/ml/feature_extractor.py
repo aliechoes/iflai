@@ -7,6 +7,7 @@ import random
 from joblib import Parallel, delayed
 from tqdm import tqdm
 from iflai.utils import list_of_dict_to_dict
+from iflai.ml.segmentation import segment_all_channels
 
 
 def get_label(h5_file_path):
@@ -106,3 +107,16 @@ class AmnisData(object):
         mask  = h5_file.get("mask")[()]
         h5_file.close()
         return image, mask
+
+    def segment_images(self):
+        index_list = self.metadata.index.tolist()
+        results = Parallel(n_jobs=self.n_jobs)(
+            delayed(self.extract_and_save_masks)(i) for i in tqdm(index_list, position=0, leave=True))
+
+    def extract_and_save_masks(self, i):
+        h5_file = h5py.File(self.metadata.loc[i, "file"], "a")
+        image = h5_file.get("image")[()] * 1.
+        mask = segment_all_channels(image)
+        del h5_file["mask"]
+        h5_file.create_dataset("mask", data=mask, dtype=float)
+        h5_file.close()
