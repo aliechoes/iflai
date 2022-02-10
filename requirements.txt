@@ -4,8 +4,12 @@ scikit-learn
 scikit-image
 xgboost
 torch
-torchvision
+torchvision==0.9.1
 tqdm
 imblearn
 h5py
 monai
+skorch
+matplotlib
+statsmodels==0.10.2
+captum
