@@ -4,13 +4,13 @@ import logging
 from sklearn.base import BaseEstimator
 from sklearn.base import TransformerMixin
 
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from sklearn.ensemble import RandomForestClassifier
-from xgboost import XGBClassifier
+from sklearn.linear_model import Lasso, Ridge
+from sklearn.svm import SVR
+from sklearn.ensemble import RandomForestRegressor
+from xgboost import XGBRegressor
 
 from sklearn.feature_selection import  SelectFromModel , SelectKBest
-from sklearn.feature_selection import mutual_info_classif
+from sklearn.feature_selection import mutual_info_regression
 from scipy.cluster import hierarchy
 from collections import defaultdict
 from statsmodels.stats.outliers_influence import variance_inflation_factor
@@ -24,11 +24,11 @@ def calc_vif(X):
 
     return(vif)
 
-class AutoFeatureSelection(BaseEstimator, TransformerMixin):
+class AutoFeatureSelectionRegression(BaseEstimator, TransformerMixin):
     """
     Auto feature selection transformer
     """
-    def __init__(self, top_k = 20, correlation_method = "spearman",correlation_threshold = 0.95, distance_threshold = 2., verbose =False):
+    def __init__(self, top_k = 20, correlation_method = "spearman", correlation_threshold = 0.95, distance_threshold = 2., verbose =False):
         self.top_k = top_k 
         self.correlation_method = correlation_method
         self.correlation_threshold = correlation_threshold
@@ -59,36 +59,35 @@ class AutoFeatureSelection(BaseEstimator, TransformerMixin):
         if self.verbose:
             print('Calculating mutual information')
 
-        selector0 = SelectKBest(    mutual_info_classif,
+        selector0 = SelectKBest(    mutual_info_regression,
                                         k = self.top_k)
         selector0 = selector0.fit(X_, y)
 
         if self.verbose:
             print('Calculating SVC')
 
-        selector1 = SelectFromModel(    SVC(kernel="linear"),
+        selector1 = SelectFromModel(    SVR(kernel="linear"),
                                         max_features = self.top_k)
         selector1 = selector1.fit(X_, y)
 
         if self.verbose:
             print('Calculating random forest')
 
-        selector2 = SelectFromModel(    RandomForestClassifier(),  
+        selector2 = SelectFromModel(    RandomForestRegressor(),  
                                         max_features = self.top_k)
         selector2 = selector2.fit(X_, y) 
 
         if self.verbose:
-            print('Calculating l1 logistic regression')
+            print('Calculating Lasso regression')
 
-        selector3 = SelectFromModel(    LogisticRegression(penalty="l1", 
-                                            solver="liblinear"),
+        selector3 = SelectFromModel(    Lasso(),
                                         max_features = self.top_k)
         selector3 = selector3.fit(X_, y) 
 
         if self.verbose:
-            print('Calculating l2 logistic regression')
+            print('Calculating Ridge regression')
 
-        selector4 = SelectFromModel(    LogisticRegression(penalty="l2"),
+        selector4 = SelectFromModel(    Ridge(),
                                         max_features = self.top_k)
         selector4 = selector4.fit(X_, y)
 
@@ -96,8 +95,7 @@ class AutoFeatureSelection(BaseEstimator, TransformerMixin):
         if self.verbose:
             print('Calculating xgb')
         
-        selector5 = SelectFromModel(    XGBClassifier(n_jobs = -1, 
-                                            eval_metric='logloss'),
+        selector5 = SelectFromModel(    XGBRegressor(n_jobs = -1),
                                         max_features = self.top_k)
         selector5 = selector5.fit(X_, y)
 

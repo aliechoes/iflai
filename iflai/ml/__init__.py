@@ -1,2 +1,3 @@
 from iflai.ml.FeatureExtractor import FeatureExtractor
-from iflai.ml.AutoFeatureSelection import AutoFeatureSelection
+from iflai.ml.AutoFeatureSelectionClassification import AutoFeatureSelectionClassification
+from iflai.ml.AutoFeatureSelectionRegression import AutoFeatureSelectionRegression

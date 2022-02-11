@@ -37,11 +37,7 @@ def get_statistics(dataloader, selected_channels):
     statistics = dict()
     statistics["min"] = torch.zeros(nmb_channels)
     statistics["p01"] = torch.zeros(nmb_channels)
-    statistics["p05"] = torch.zeros(nmb_channels)
-    statistics["p25"] = torch.zeros(nmb_channels)
     statistics["p50"] = torch.zeros(nmb_channels)
-    statistics["p75"] = torch.zeros(nmb_channels)
-    statistics["p95"] = torch.zeros(nmb_channels)
     statistics["p99"] = torch.zeros(nmb_channels)
     statistics["max"] = torch.zeros(nmb_channels)
 
@@ -51,14 +47,10 @@ def get_statistics(dataloader, selected_channels):
     for _, data_l in enumerate(tqdm(dataloader), 0):
         image, _ = data_l
         for n in range(nmb_channels):
-            statistics["min"][n] += image[:, n, :, :].min()
-            statistics["p01"][n] += torch.quantile(image[:, n, :, :], 0.01)
-            statistics["p05"][n] += torch.quantile(image[:, n, :, :], 0.05)
-            statistics["p25"][n] += torch.quantile(image[:, n, :, :], 0.25)
-            statistics["p50"][n] += torch.quantile(image[:, n, :, :], 0.50)
-            statistics["p75"][n] += torch.quantile(image[:, n, :, :], 0.75)
-            statistics["p95"][n] += torch.quantile(image[:, n, :, :], 0.95)
-            statistics["p99"][n] += torch.quantile(image[:, n, :, :], 0.99)
+            statistics["min"][n] += image[:, n, :, :].min()  
+            statistics["p01"][n] += torch.quantile(image[:, n, :, :], 0.01 )  
+            statistics["p50"][n] += torch.quantile(image[:, n, :, :], 0.50 )  
+            statistics["p99"][n] += torch.quantile(image[:, n, :, :], 0.99 )  
             statistics["max"][n] += image[:, n, :, :].max()
 
             statistics["mean"][n] += image[:, n, :, :].mean()
