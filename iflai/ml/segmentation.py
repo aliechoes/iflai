@@ -1,13 +1,14 @@
 from skimage.filters import threshold_otsu
 from skimage.filters import sobel
-from skimage.morphology import disk,  remove_small_objects, binary_closing
+from skimage.morphology import disk, remove_small_objects, binary_closing
 from scipy.ndimage import binary_fill_holes
 
-__all__ = [ 'segment_all_channels',
-            'bright_field_segmentation',
-            'fluorescent_segmentation']
+__all__ = ['segment_all_channels',
+           'bright_field_segmentation',
+           'fluorescent_segmentation']
 
-def segment_all_channels(image, min_size=100, selem = disk(5)):
+
+def segment_all_channels(image, min_size=100, selem=disk(5)):
     """calculates the segmentation per channel
     
     It considers the first channel is brightfield and the rest are fluorescents
@@ -26,21 +27,20 @@ def segment_all_channels(image, min_size=100, selem = disk(5)):
     -------
     None
     """
-    segmented_image = image.copy()*0
+    segmented_image = image.copy() * 0
     for ch in range(image.shape[2]):
         if ch == 0:
-            segmented_image[:,:,ch] = bright_field_segmentation(image[:,:,ch], 
-                                                                min_size=min_size, 
-                                                                selem = selem)
+            segmented_image[:, :, ch] = bright_field_segmentation(image[:, :, ch],
+                                                                  min_size=min_size,
+                                                                  selem=selem)
         else:
-            segmented_image[:,:,ch] = fluorescent_segmentation(image[:,:,ch], 
-                                                                min_size=min_size, 
-                                                                selem = selem)
-
+            segmented_image[:, :, ch] = fluorescent_segmentation(image[:, :, ch],
+                                                                 min_size=min_size,
+                                                                 selem=selem)
     return segmented_image
 
 
-def bright_field_segmentation(image, min_size=100, selem = disk(5)):
+def bright_field_segmentation(image, min_size=100, selem=disk(5)):
     """calculates the segmentation per channel using edge detection
     
     It first calculates the sobel filtered image to calculate the edges.
@@ -71,24 +71,25 @@ def bright_field_segmentation(image, min_size=100, selem = disk(5)):
     2.  We use otsu thresholding in the background
 
     """
-    segmented_image = image.copy()*0
+    segmented_image = image.copy() * 0
     # calculate edges
     edges = sobel(image)
 
     # segmentation
     threshold_level = threshold_otsu(edges)
-    bw = edges > threshold_level # bw is a standard variable name for binary images
-        
+    bw = edges > threshold_level  # bw is a standard variable name for binary images
+
     # postprocessing
-    bw_cleared = remove_small_objects(bw, min_size) # clear objects <100 px
+    bw_cleared = remove_small_objects(bw, min_size)  # clear objects <100 px
 
     # close the edges of the outline with morphological closing
     bw_close = binary_closing(bw_cleared, selem=selem)
     segmented_image = binary_fill_holes(bw_close)
-    
+
     return segmented_image.astype(int)
 
-def fluorescent_segmentation(image, min_size=100, selem = disk(5)):
+
+def fluorescent_segmentation(image, min_size=100, selem=disk(5)):
     """calculates the segmentation using direct thresholding
     
     It calcualtes the threshold using otsu thresholding.
@@ -119,13 +120,13 @@ def fluorescent_segmentation(image, min_size=100, selem = disk(5)):
     2.  We use otsu thresholding in the background
 
     """
-    segmented_image = image.copy()*0
+    segmented_image = image.copy() * 0
     # segmentation
     threshold_level = threshold_otsu(image)
-    bw = image > threshold_level # bw is a standard variable name for binary images
-        
+    bw = image > threshold_level  # bw is a standard variable name for binary images
+
     # postprocessing
-    bw_cleared = remove_small_objects(bw, min_size) # clear objects 
+    bw_cleared = remove_small_objects(bw, min_size)  # clear objects
 
     # close the edges of the outline with morphological closing
     bw_close = binary_closing(bw_cleared, selem=selem)
