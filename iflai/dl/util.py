@@ -17,20 +17,6 @@ def read_data(path_to_data):
         y.append(r["label"][()])
 
 
-def read_data_with_data_map(path_to_data):
-    X = []
-    y = []
-    for image_name in os.listdir(path_to_data):
-        o_n = os.path.splitext(image_name)[0]
-        r = h5py.File(os.path.join(path_to_data, image_name), 'r')
-        X.append(int(o_n))
-        y.append(r["label"][()])
-
-    data_map = dict(zip(sorted(set(y)), np.arange(len(set(y)))))
-    class_names = [i for i in list(data_map.keys())]
-    return X, y, class_names, data_map
-
-
 def get_statistics(dataloader, selected_channels):
     nmb_channels = len(selected_channels)
 
@@ -62,29 +48,6 @@ def get_statistics(dataloader, selected_channels):
 
     print('statistics used: %s' % (str(statistics)))
 
-    return statistics
-
-
-def get_statistics_only_mean_std(dataloader, only_channels, logging, num_channels):
-    nmb_channels = 0
-    if len(only_channels) == 0:
-        nmb_channels = num_channels
-    else:
-        nmb_channels = len(only_channels)
-
-    statistics = dict()
-    statistics["mean"] = torch.zeros(nmb_channels)
-    statistics["std"] = torch.zeros(nmb_channels)
-
-    for j, data_l in enumerate(dataloader, 0):
-        data_l = data_l["image"]
-        for n in range(nmb_channels):
-            statistics["mean"][n] += data_l[:, n, :, :].mean()
-            statistics["std"][n] += data_l[:, n, :, :].std()
-    statistics["mean"] = statistics["mean"].div_(len(dataloader))
-    statistics["std"] = statistics["std"].div_(len(dataloader))
-    if logging is not None:
-        logging.info('statistics used: %s' % (str(statistics)))
     return statistics
 
 

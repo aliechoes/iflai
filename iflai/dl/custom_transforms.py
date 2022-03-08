@@ -29,6 +29,28 @@ class LoadTensor(object):
         return sample_tensor[0], sample_tensor[1]
 
 
+class ShuffleChannel(object):
+    """
+    Shuffle the chosen channel
+    """
+
+    def __init__(self, channels_to_shuffle=[], perturb=False) -> None:
+        self.channels_to_shuffle = channels_to_shuffle
+        self.perturb = perturb
+
+    def __call__(self, image):
+        if len(self.channels_to_shuffle) > 0:
+            for channel in self.channels_to_shuffle:
+                channel_shape = image[channel].shape
+                if self.perturb:
+                    image[channel] = torch.full(channel_shape, torch.mean(image[channel]))
+                else:
+                    image[channel] = image[channel].flatten()[
+                        torch.randperm(len(image[channel].flatten()))].reshape(
+                        channel_shape)
+        return image
+
+
 class AddGaussianNoise(object):
     def __init__(self, mean=0., std=1., p=0.5):
         self.std = std
