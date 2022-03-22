@@ -24,7 +24,7 @@ def calc_vif(X):
 
     return(vif)
 
-class AutoFeatureSelectionClassification(BaseEstimator, TransformerMixin):
+class AutoFeatureSelection(BaseEstimator, TransformerMixin):
     """
     Auto feature selection transformer
     """
