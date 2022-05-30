@@ -2,6 +2,7 @@
 
 In this repository, a series of machine learning approaches are implemented to classify and analyze Imaging Flow Cytometry data. 
 
+A significant contribution of IFAI is the focus on reproducibility and interpretability in the analysis part. We have provided an open-source python package using only well-known libraries such as SciPy, NumPy, Pandas, scikit-learn, and scikit-image. This design guarantees that the package can be maintained and updated with minimal effort. This package can be used on multiple CPUs, enabling high-performance computing use-cases. This parallelism is essential as imaging flow cytometry is a high-throughput technology. This package is designed as a standalone implementation that is easier to use compared to the previous work of Henning et al., which depends on other software such as CellProfiler.  IFAI focuses on interpretability without compromising performance, which is different from Deepometry, which focuses on performance by using a ResNet50 as the backbone. This interpretability enables the investigation of different aspects of the cells. 
 
 ## Data structure
 
